@@ -34,6 +34,10 @@
 #include <linux/io-64-nonatomic-lo-hi.h>
 #include "ahci.h"
 
+#ifdef CONFIG_X86_PS4
+#include <asm/ps4.h>
+#endif
+
 #define DRV_NAME	"ahci"
 #define DRV_VERSION	"3.0"
 
@@ -576,6 +580,11 @@ static const struct pci_device_id ahci_pci_tbl[] = {
 
 	/* Enmotus */
 	{ PCI_DEVICE(0x1c44, 0x8000), board_ahci },
+
+	/* Sony (PS4) */
+	{ PCI_VDEVICE(SONY, PCI_DEVICE_ID_SONY_AEOLIA_AHCI), board_ahci },
+	{ PCI_VDEVICE(SONY, PCI_DEVICE_ID_SONY_BELIZE_AHCI), board_ahci },
+	{ PCI_VDEVICE(SONY, PCI_DEVICE_ID_SONY_BAIKAL_AHCI), board_ahci },
 
 	/* Generic, PCI class code for AHCI */
 	{ PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID, PCI_ANY_ID,
@@ -1524,6 +1533,11 @@ static int ahci_init_msi(struct pci_dev *pdev, unsigned int n_ports,
 {
 	int nvec;
 
+#ifdef CONFIG_X86_PS4
+	if (pdev->vendor == PCI_VENDOR_ID_SONY) {
+		return apcie_assign_irqs(pdev, n_ports);
+	}
+#endif
 	if (hpriv->flags & AHCI_HFLAG_NO_MSI)
 		return -ENODEV;
 
@@ -1637,7 +1651,11 @@ static int ahci_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
 	VPRINTK("ENTER\n");
 
 	WARN_ON((int)ATA_MAX_QUEUE > AHCI_MAX_CMDS);
-
+#ifdef CONFIG_X86_PS4
+	/* This will return negative on non-PS4 platforms */
+	if (apcie_status() == 0)
+		return -EPROBE_DEFER;
+#endif
 	ata_print_version_once(&pdev->dev, DRV_VERSION);
 
 	/* The AHCI driver can only drive the SATA ports, the PATA driver
@@ -1876,6 +1894,11 @@ static void ahci_remove_one(struct pci_dev *pdev)
 {
 	pm_runtime_get_noresume(&pdev->dev);
 	ata_pci_remove_one(pdev);
+#ifdef CONFIG_X86_PS4
+	if (pdev->vendor == PCI_VENDOR_ID_SONY) {
+		apcie_free_irqs(pdev->irq, 1);
+	}
+#endif
 }
 
 module_pci_driver(ahci_pci_driver);
