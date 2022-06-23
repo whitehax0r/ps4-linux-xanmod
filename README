@@ -1,3 +1,16 @@
+
+Vanilla kernel based on kernel 5.4.108 with XanMod patches and ps4patches
+as well.
+
+How to compile this kernel?
+
+git clone https://github.com/whitehax0r/ps4-linux-xanmod.git
+cd ps4-linux-xanmod
+mv config .config
+make -j9 bzImage
+
+Only tested on latest ArchLinux.
+
 Linux kernel
 ============
 
